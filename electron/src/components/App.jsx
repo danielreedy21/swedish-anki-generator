@@ -73,17 +73,11 @@ export default function App() {
 
   const handleCreateCard = async (deck, createReverse) => {
     if (!wordData) return
-    const def = wordData.details.definitions[selectedDef]
 
     const cardData = {
       word: wordData.word,
       article: wordData.details['word with article'],
-      word_class: def.class,
-      translation: def.improved_translation || def.translation || '',
-      definition: def.definition || '',
-      example: def.example || null,
-      synonyms: def.synonyms || [],
-      phonetic: def.phonetic || null,
+      definitions: wordData.details.definitions,  // pass all definitions
       audio_path: audioPath,
       image_url: selectedImage,
       deck,

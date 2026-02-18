@@ -133,23 +133,23 @@ def create_card():
     """
     data = request.get_json()
 
-    required = ['word', 'word_class', 'translation']
+    required = ['word', 'definitions']
     missing = [f for f in required if not data.get(f)]
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
 
-    # generate a definition if missing
-    definition = data.get('definition')
-    if not definition:
-        print(f'Generating definition for "{data["word"]}"...')
-        # reconstruct a minimal definition_entry for generate_definition
-        definition_entry = {
-            'class': data['word_class'],
-            'translation': data['translation'],
-            'synonyms': data.get('synonyms', []),
-            'example': data.get('example'),
-        }
-        definition = generate_definition(data['word'], definition_entry)
+    definitions = data['definitions']
+    if not definitions:
+        return jsonify({'error': 'No definitions provided'}), 400
+
+    # generate definitions for any entries missing them
+    for i, def_entry in enumerate(definitions):
+        if not def_entry.get('definition'):
+            print(f'Generating definition for "{data["word"]}" sense {i+1}...')
+            definitions[i]['definition'] = generate_definition(data['word'], def_entry)
+
+    # collect all word classes for tags
+    word_classes = list(set(d.get('class', '') for d in definitions if d.get('class')))
 
     if not is_anki_running():
         return jsonify({'error': 'Anki is not running or AnkiConnect is not installed'}), 503
@@ -158,12 +158,8 @@ def create_card():
         note_id = add_card(
             word=data['word'],
             article=data.get('article'),
-            word_class=data['word_class'],
-            translation=data['translation'],
-            definition=definition,
-            example=data.get('example'),
-            synonyms=data.get('synonyms', []),
-            phonetic=data.get('phonetic'),
+            definitions=definitions,
+            word_classes=word_classes,
             audio_path=data.get('audio_path'),
             image_url=data.get('image_url'),
             deck=data.get('deck', 'Swedish'),
@@ -171,13 +167,14 @@ def create_card():
 
         result = {'success': True, 'note_id': note_id}
 
-        # create reverse card if requested
+        # create reverse card if requested - use first definition's data
         if data.get('create_reverse'):
+            first_def = definitions[0]
             reverse_id = add_reverse_card(
                 word=data['word'],
                 article=data.get('article'),
-                definition=definition,
-                phonetic=data.get('phonetic'),
+                definition=first_def.get('definition', ''),
+                phonetic=first_def.get('phonetic'),
                 audio_path=data.get('audio_path'),
                 image_url=data.get('image_url'),
                 deck=data.get('deck', 'Swedish'),

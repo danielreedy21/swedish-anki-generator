@@ -33,44 +33,64 @@ def is_anki_running() -> bool:
 def add_card(
     word: str,
     article: Optional[str],
-    word_class: str,
-    translation: str,
-    definition: str,
-    example: Optional[str],
-    synonyms: list,
-    phonetic: Optional[str],
+    definitions: list,
+    word_classes: list,
     audio_path: Optional[str],
     image_url: Optional[str],
     deck: str = ANKI_DECK_NAME,
 ) -> int:
     """
-    Create an Anki card via AnkiConnect.
-    Returns the new note ID.
-
-    Front: the word with article (if noun), e.g. 'en hund'
-    Back:  translation, definition, example, synonyms, audio, image
+    Create an Anki card with all definitions for a word.
+    Each definition is numbered and includes its translation, Swedish definition,
+    examples, and synonyms.
     """
     front_word = f'{article}' if article else word
 
-    # build back of card
-    back_parts = [f'<b>{translation}</b>']
+    # build back of card with all definitions
+    back_parts = []
 
-    if definition:
-        back_parts.append(f'<i>{definition}</i>')
+    for i, def_entry in enumerate(definitions, 1):
+        def_parts = []
+        
+        # number and word class
+        word_class = def_entry.get('class', '')
+        translation = def_entry.get('improved_translation') or def_entry.get('translation', '')
+        
+        header = f'<b>{i}. {word_class}'
+        if translation:
+            header += f' — {translation}'
+        header += '</b>'
+        def_parts.append(header)
 
-    if example:
-        back_parts.append(f'Exempel: {example}')
+        # Swedish definition
+        definition = def_entry.get('definition')
+        if definition:
+            def_parts.append(f'<i>{definition}</i>')
 
-    if synonyms:
-        back_parts.append(f'Synonymer: {", ".join(synonyms)}')
+        # example
+        example = def_entry.get('example')
+        if example:
+            def_parts.append(f'<span style="font-size: 90%;">ex: {example}</span>')
 
-    if phonetic:
-        back_parts.append(f'[{phonetic}]')
+        # synonyms
+        synonyms = def_entry.get('synonyms', [])
+        if synonyms:
+            def_parts.append(f'<span style="font-size: 90%;">synonymer: {", ".join(synonyms)}</span>')
 
+        # phonetic (only on first definition to avoid repetition)
+        if i == 1:
+            phonetic = def_entry.get('phonetic')
+            if phonetic:
+                def_parts.append(f'<span style="font-size: 90%; color: #999;">[{phonetic}]</span>')
+
+        back_parts.append('<br>'.join(def_parts))
+
+    # add audio (once, not per definition)
     if audio_path:
         filename = os.path.basename(audio_path)
         back_parts.append(f'[sound:{filename}]')
 
+    # add image
     if image_url:
         back_parts.append(f'<img src="{image_url}">')
 
@@ -85,7 +105,7 @@ def add_card(
                 'Front': front_word,
                 'Back': back,
             },
-            'tags': ['swedish', word_class.lower()],
+            'tags': ['swedish', 'word-card', 'forward-card'] + [wc.lower() for wc in word_classes if wc],
             'options': {
                 'allowDuplicate': False,
                 'duplicateScope': 'deck',
@@ -156,7 +176,7 @@ def add_reverse_card(
                 'Front': front,
                 'Back': back,
             },
-            'tags': ['swedish', 'reverse'],
+            'tags': ['swedish', 'word-card', 'reverse-card'],
             'options': {
                 'allowDuplicate': False,
                 'duplicateScope': 'deck',
