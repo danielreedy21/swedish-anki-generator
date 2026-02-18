@@ -1,27 +1,112 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { SectionLabel } from './DefinitionList'
 
-export default function ImagePicker({ images, selected, onSelect }) {
+export default function ImagePicker({ images, selected, onSelect, word }) {
+  const [customQuery, setCustomQuery] = useState('')
+  const [customImages, setCustomImages] = useState([])
+  const [searching, setSearching] = useState(false)
+
+  const handleCustomSearch = async () => {
+    if (!customQuery.trim()) return
+    setSearching(true)
+    const results = await window.api.getImages(customQuery.trim())
+    setCustomImages(results || [])
+    setSearching(false)
+  }
+
+  const allImages = [...images, ...customImages]
+
   return (
     <div style={{ marginBottom: '16px' }}>
       <SectionLabel text="välj bild" />
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(5, 1fr)',
-        gap: '6px',
-      }}>
-        {images.map((url, i) => (
-          <ImageThumb
-            key={i}
-            url={url}
-            isSelected={url === selected}
-            onSelect={() => onSelect(url === selected ? null : url)} // toggle off if clicked again
-          />
-        ))}
+      {/* main image grid */}
+      {images.length > 0 && (
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(5, 1fr)',
+          gap: '6px',
+          marginBottom: '12px',
+        }}>
+          {images.map((url, i) => (
+            <ImageThumb
+              key={i}
+              url={url}
+              isSelected={url === selected}
+              onSelect={() => onSelect(url === selected ? null : url)}
+            />
+          ))}
+          <NoneThumb isSelected={selected === null} onSelect={() => onSelect(null)} />
+        </div>
+      )}
 
-        {/* 'none' option */}
-        <NoneThumb isSelected={selected === null} onSelect={() => onSelect(null)} />
+      {/* custom search */}
+      <div style={{
+        background: 'var(--bg-2)',
+        border: '1px solid var(--border)',
+        borderRadius: 'var(--radius)',
+        padding: '10px',
+      }}>
+        <div style={{
+          fontSize: '10px',
+          color: 'var(--text-muted)',
+          marginBottom: '6px',
+          letterSpacing: '0.05em',
+        }}>
+          EGEN SÖKNING
+        </div>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          <input
+            value={customQuery}
+            onChange={e => setCustomQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleCustomSearch()}
+            placeholder={`försök "dog photo" eller "swedish flag"`}
+            style={{
+              flex: 1,
+              background: 'var(--bg-3)',
+              color: 'var(--text)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)',
+              padding: '5px 8px',
+              fontSize: '12px',
+              fontFamily: 'var(--font-mono)',
+            }}
+          />
+          <button
+            onClick={handleCustomSearch}
+            disabled={searching || !customQuery.trim()}
+            style={{
+              background: 'var(--accent)',
+              color: '#fff',
+              fontSize: '11px',
+              padding: '5px 12px',
+              borderRadius: 'var(--radius)',
+              opacity: (searching || !customQuery.trim()) ? 0.5 : 1,
+              cursor: (searching || !customQuery.trim()) ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {searching ? '...' : 'sök'}
+          </button>
+        </div>
+
+        {/* custom results */}
+        {customImages.length > 0 && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(5, 1fr)',
+            gap: '6px',
+            marginTop: '10px',
+          }}>
+            {customImages.map((url, i) => (
+              <ImageThumb
+                key={`custom-${i}`}
+                url={url}
+                isSelected={url === selected}
+                onSelect={() => onSelect(url === selected ? null : url)}
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )

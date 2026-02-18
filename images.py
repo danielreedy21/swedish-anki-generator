@@ -36,7 +36,7 @@ def get_serper_images(word: str, num: int = 5) -> list[str]:
                 'Content-Type': 'application/json'
             },
             json={
-                'q': word + 'bild',
+                'q': word,
                 'gl': 'se',   # Swedish locale
                 'hl': 'sv',   # Swedish language
                 'num': num

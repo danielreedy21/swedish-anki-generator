@@ -168,6 +168,7 @@ export default function App() {
                 images={images}
                 selected={selectedImage}
                 onSelect={setSelectedImage}
+                word={wordData.word}
               />
             )}
 
