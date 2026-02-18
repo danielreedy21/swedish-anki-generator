@@ -1,0 +1,81 @@
+:root {
+  --bg:         #0f0f0f;
+  --bg-2:       #1a1a1a;
+  --bg-3:       #242424;
+  --border:     #2e2e2e;
+  --text:       #e8e4dd;
+  --text-muted: #7a7570;
+  --accent:     #006AA7;   /* Swedish flag blue */
+  --accent-2:   #FECC02;   /* Swedish flag yellow */
+  --success:    #4a9e6b;
+  --danger:     #c0504d;
+  --radius:     6px;
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-mono:  'DM Mono', 'Courier New', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+/* scrollable areas */
+.scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.scroll::-webkit-scrollbar { width: 4px; }
+.scroll::-webkit-scrollbar-track { background: transparent; }
+.scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* drag region for frameless window */
+.titlebar {
+  -webkit-app-region: drag;
+  height: 28px;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+button {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  border: none;
+  outline: none;
+  transition: opacity 0.15s, background 0.15s, transform 0.1s;
+}
+
+button:active { transform: scale(0.97); }
+
+input {
+  font-family: var(--font-mono);
+  outline: none;
+  border: none;
+}
+
+/* fade-in animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fadeUp 0.25s ease forwards;
+}

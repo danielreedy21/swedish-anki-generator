@@ -1,0 +1,33 @@
+{
+  "name": "anki-swedish",
+  "version": "1.0.0",
+  "description": "Swedish Anki card generator",
+  "main": "main.js",
+  "scripts": {
+    "dev": "NODE_ENV=development electron .",
+    "dev:vite": "vite src",
+    "build": "vite build src && electron-builder",
+    "start": "electron ."
+  },
+  "build": {
+    "appId": "com.yourname.anki-swedish",
+    "mac": {
+      "target": "dmg"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "dist/**/*"
+    ]
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0",
+    "vite": "^5.0.0"
+  }
+}

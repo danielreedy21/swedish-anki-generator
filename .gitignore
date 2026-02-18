@@ -1,0 +1,4 @@
+audio/*
+.env
+electron/node_modules/*
+data/*
