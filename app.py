@@ -161,22 +161,23 @@ def create_card():
             definitions=definitions,
             word_classes=word_classes,
             audio_path=data.get('audio_path'),
-            image_url=data.get('image_url'),
+            image_urls=data.get('image_urls', []),
             deck=data.get('deck', 'Swedish'),
         )
 
         result = {'success': True, 'note_id': note_id}
 
-        # create reverse card if requested - use first definition's data
+        # create reverse card if requested - use all definitions and images
         if data.get('create_reverse'):
-            first_def = definitions[0]
+            # use first definition's phonetic (they're usually the same across senses)
+            first_phonetic = definitions[0].get('phonetic') if definitions else None
             reverse_id = add_reverse_card(
                 word=data['word'],
                 article=data.get('article'),
-                definition=first_def.get('definition', ''),
-                phonetic=first_def.get('phonetic'),
+                definitions=definitions,
+                phonetic=first_phonetic,
                 audio_path=data.get('audio_path'),
-                image_url=data.get('image_url'),
+                image_urls=data.get('image_urls', []),
                 deck=data.get('deck', 'Swedish'),
             )
             result['reverse_note_id'] = reverse_id

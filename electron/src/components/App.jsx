@@ -12,7 +12,7 @@ export default function App() {
   const [error, setError]               = useState(null)
   const [selectedDef, setSelectedDef]   = useState(0)
   const [images, setImages]             = useState([])
-  const [selectedImage, setSelectedImage] = useState(null)
+  const [selectedImage, setSelectedImage] = useState([])
   const [audioPath, setAudioPath]       = useState(null)
   const [cardStatus, setCardStatus]     = useState(null) // 'success' | 'error' | null
   const [step, setStep]                 = useState('lookup') // 'lookup' | 'images' | 'done'
@@ -29,7 +29,7 @@ export default function App() {
     setError(null)
     setWordData(null)
     setImages([])
-    setSelectedImage(null)
+    setSelectedImage([])
     setAudioPath(null)
     setCardStatus(null)
     setSelectedDef(0)
@@ -79,7 +79,7 @@ export default function App() {
       article: wordData.details['word with article'],
       definitions: wordData.details.definitions,  // pass all definitions
       audio_path: audioPath,
-      image_url: selectedImage,
+      image_urls: selectedImage,  // now an array
       deck,
       create_reverse: createReverse,
     }

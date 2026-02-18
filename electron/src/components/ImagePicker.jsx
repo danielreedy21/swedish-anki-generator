@@ -16,9 +16,24 @@ export default function ImagePicker({ images, selected, onSelect, word }) {
 
   const allImages = [...images, ...customImages]
 
+  // selected is now an array of URLs
+  const selectedArray = Array.isArray(selected) ? selected : []
+
+  const toggleImage = (url) => {
+    if (selectedArray.includes(url)) {
+      // deselect
+      onSelect(selectedArray.filter(u => u !== url))
+    } else {
+      // select (max 4)
+      if (selectedArray.length < 4) {
+        onSelect([...selectedArray, url])
+      }
+    }
+  }
+
   return (
     <div style={{ marginBottom: '16px' }}>
-      <SectionLabel text="välj bild" />
+      <SectionLabel text={`välj bild${selectedArray.length > 0 ? `er (${selectedArray.length}/4)` : 'er'}`} />
 
       {/* main image grid */}
       {images.length > 0 && (
@@ -32,11 +47,15 @@ export default function ImagePicker({ images, selected, onSelect, word }) {
             <ImageThumb
               key={i}
               url={url}
-              isSelected={url === selected}
-              onSelect={() => onSelect(url === selected ? null : url)}
+              isSelected={selectedArray.includes(url)}
+              onSelect={() => toggleImage(url)}
+              disabled={!selectedArray.includes(url) && selectedArray.length >= 4}
             />
           ))}
-          <NoneThumb isSelected={selected === null} onSelect={() => onSelect(null)} />
+          <NoneThumb 
+            isSelected={selectedArray.length === 0} 
+            onSelect={() => onSelect([])} 
+          />
         </div>
       )}
 
@@ -101,8 +120,9 @@ export default function ImagePicker({ images, selected, onSelect, word }) {
               <ImageThumb
                 key={`custom-${i}`}
                 url={url}
-                isSelected={url === selected}
-                onSelect={() => onSelect(url === selected ? null : url)}
+                isSelected={selectedArray.includes(url)}
+                onSelect={() => toggleImage(url)}
+                disabled={!selectedArray.includes(url) && selectedArray.length >= 4}
               />
             ))}
           </div>
@@ -112,20 +132,21 @@ export default function ImagePicker({ images, selected, onSelect, word }) {
   )
 }
 
-function ImageThumb({ url, isSelected, onSelect }) {
+function ImageThumb({ url, isSelected, onSelect, disabled }) {
   return (
     <div
-      onClick={onSelect}
+      onClick={disabled ? undefined : onSelect}
       style={{
         aspectRatio: '1',
         borderRadius: 'var(--radius)',
         overflow: 'hidden',
         border: `2px solid ${isSelected ? 'var(--accent-2)' : 'transparent'}`,
-        cursor: 'pointer',
-        transition: 'border-color 0.15s, transform 0.1s',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        transition: 'border-color 0.15s, transform 0.1s, opacity 0.15s',
         transform: isSelected ? 'scale(1.04)' : 'scale(1)',
         background: 'var(--bg-3)',
         position: 'relative',
+        opacity: disabled ? 0.4 : 1,
       }}
     >
       <img

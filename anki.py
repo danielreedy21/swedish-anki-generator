@@ -36,13 +36,13 @@ def add_card(
     definitions: list,
     word_classes: list,
     audio_path: Optional[str],
-    image_url: Optional[str],
+    image_urls: list,
     deck: str = ANKI_DECK_NAME,
 ) -> int:
     """
     Create an Anki card with all definitions for a word.
     Each definition is numbered and includes its translation, Swedish definition,
-    examples, and synonyms.
+    examples, and synonyms. Supports up to 4 images.
     """
     front_word = f'{article}' if article else word
 
@@ -90,9 +90,17 @@ def add_card(
         filename = os.path.basename(audio_path)
         back_parts.append(f'[sound:{filename}]')
 
-    # add image
-    if image_url:
-        back_parts.append(f'<img src="{image_url}">')
+    # add images in a grid layout (up to 4)
+    if image_urls:
+        num_images = len(image_urls)
+        if num_images == 1:
+            back_parts.append(f'<img src="{image_urls[0]}" style="max-width: 400px; border-radius: 8px;">')
+        elif num_images == 2:
+            imgs = ''.join([f'<img src="{url}" style="width: 48%; margin: 1%; border-radius: 8px;">' for url in image_urls])
+            back_parts.append(f'<div>{imgs}</div>')
+        else:  # 3 or 4 images
+            imgs = ''.join([f'<img src="{url}" style="width: 48%; margin: 1%; border-radius: 8px;">' for url in image_urls])
+            back_parts.append(f'<div>{imgs}</div>')
 
     back = '<br><br>'.join(back_parts)
 
@@ -124,34 +132,53 @@ def get_decks() -> list[str]:
 def add_reverse_card(
     word: str,
     article: Optional[str],
-    definition: str,
+    definitions: list,
     phonetic: Optional[str],
     audio_path: Optional[str],
-    image_url: Optional[str],
+    image_urls: list,
     deck: str = ANKI_DECK_NAME,
 ) -> int:
     """
-    Create a reverse Anki card (image + definition → word).
-    The front shows the image with a collapsible definition hint.
+    Create a reverse Anki card (images + definitions → word).
+    The front shows up to 4 images with collapsible definition hints.
     The back shows the Swedish word with phonetic and audio.
     """
     front_word = f'{article}' if article else word
 
-    # front: image and collapsible definition
+    # front: images and collapsible definitions
     front_parts = []
-    if image_url:
-        front_parts.append(f'<img src="{image_url}" style="max-width: 300px; border-radius: 8px;">')
     
-    if definition:
-        # collapsible definition using <details> HTML tag
-        front_parts.append(f'''
-            <details style="margin-top: 12px; cursor: pointer;">
-                <summary style="color: #7a7570; font-size: 11px;">💡 visa ledtråd</summary>
-                <div style="margin-top: 8px; font-style: italic; color: #e8e4dd;">
-                    {definition}
-                </div>
-            </details>
-        ''')
+    # add images in a grid layout (up to 4)
+    if image_urls:
+        num_images = len(image_urls)
+        if num_images == 1:
+            front_parts.append(f'<img src="{image_urls[0]}" style="max-width: 300px; border-radius: 8px;">')
+        elif num_images == 2:
+            imgs = ''.join([f'<img src="{url}" style="width: 48%; margin: 1%; border-radius: 8px;">' for url in image_urls])
+            front_parts.append(f'<div>{imgs}</div>')
+        else:  # 3 or 4 images
+            imgs = ''.join([f'<img src="{url}" style="width: 48%; margin: 1%; border-radius: 8px;">' for url in image_urls])
+            front_parts.append(f'<div>{imgs}</div>')
+    
+    # build all definitions into collapsible hint
+    if definitions:
+        def_lines = []
+        for i, def_entry in enumerate(definitions, 1):
+            definition = def_entry.get('definition', '')
+            if definition:
+                word_class = def_entry.get('class', '')
+                def_lines.append(f'{i}. {word_class} — <i>{definition}</i>')
+        
+        if def_lines:
+            definitions_html = '<br>'.join(def_lines)
+            front_parts.append(f'''
+                <details style="margin-top: 12px; cursor: pointer;">
+                    <summary style="color: #7a7570; font-size: 11px;">💡 visa ledtråd</summary>
+                    <div style="margin-top: 8px; font-size: 12px; color: #e8e4dd;">
+                        {definitions_html}
+                    </div>
+                </details>
+            ''')
     
     front = '<br>'.join(front_parts) if front_parts else 'no context available'
 
