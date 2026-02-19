@@ -10,7 +10,6 @@ export default function App() {
   const [wordData, setWordData]         = useState(null)  // { word, details }
   const [loading, setLoading]           = useState(false)
   const [error, setError]               = useState(null)
-  const [selectedDef, setSelectedDef]   = useState(0)
   const [images, setImages]             = useState([])
   const [selectedImage, setSelectedImage] = useState([])
   const [audioPath, setAudioPath]       = useState(null)
@@ -32,7 +31,6 @@ export default function App() {
     setSelectedImage([])
     setAudioPath(null)
     setCardStatus(null)
-    setSelectedDef(0)
     setStep('lookup')
 
     try {
@@ -97,26 +95,8 @@ export default function App() {
   }
 
   // ---------------------------------------------------------------------------
-  // Improve translation
-  // ---------------------------------------------------------------------------
-
-  const handleImproveTranslation = async () => {
-    if (!wordData) return
-    const improved = await window.api.improveTranslation(wordData.word, selectedDef)
-    if (improved) {
-      setWordData(prev => {
-        const defs = [...prev.details.definitions]
-        defs[selectedDef] = improved
-        return { ...prev, details: { ...prev.details, definitions: defs } }
-      })
-    }
-  }
-
-  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
-
-  const def = wordData?.details?.definitions?.[selectedDef]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: 'var(--bg)' }}>
@@ -142,15 +122,20 @@ export default function App() {
             <WordHeader
               word={wordData.word}
               article={wordData.details['word with article']}
-              phonetic={def?.phonetic}
+              phonetic={wordData.details.definitions[0]?.phonetic}
               audioPath={audioPath}
             />
 
             <DefinitionList
               definitions={wordData.details.definitions}
-              selectedIndex={selectedDef}
-              onSelect={setSelectedDef}
-              onImprove={handleImproveTranslation}
+              word={wordData.word}
+              onImprove={(definitionIndex, improvedDef) => {
+                setWordData(prev => {
+                  const defs = [...prev.details.definitions]
+                  defs[definitionIndex] = improvedDef
+                  return { ...prev, details: { ...prev.details, definitions: defs } }
+                })
+              }}
             />
 
             <InflectionList
@@ -168,7 +153,7 @@ export default function App() {
 
             <CardCreator
               onCreateCard={handleCreateCard}
-              disabled={!def}
+              disabled={!wordData}
               cardStatus={cardStatus}
             />
 

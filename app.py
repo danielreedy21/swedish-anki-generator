@@ -169,18 +169,25 @@ def create_card():
 
         # create reverse card if requested - use all definitions and images
         if data.get('create_reverse'):
-            # use first definition's phonetic (they're usually the same across senses)
-            first_phonetic = definitions[0].get('phonetic') if definitions else None
-            reverse_id = add_reverse_card(
-                word=data['word'],
-                article=data.get('article'),
-                definitions=definitions,
-                phonetic=first_phonetic,
-                audio_path=data.get('audio_path'),
-                image_urls=data.get('image_urls', []),
-                deck=data.get('deck', 'Swedish'),
-            )
-            result['reverse_note_id'] = reverse_id
+            try:
+                # use first definition's phonetic (they're usually the same across senses)
+                first_phonetic = definitions[0].get('phonetic') if definitions else None
+                reverse_id = add_reverse_card(
+                    word=data['word'],
+                    article=data.get('article'),
+                    definitions=definitions,
+                    phonetic=first_phonetic,
+                    audio_path=data.get('audio_path'),
+                    image_urls=data.get('image_urls', []),
+                    deck=data.get('deck', 'Swedish'),
+                )
+                result['reverse_note_id'] = reverse_id
+            except Exception as e:
+                print(f'Reverse card creation failed: {e}')
+                import traceback
+                traceback.print_exc()
+                # Don't fail the whole request if reverse fails
+                result['reverse_error'] = str(e)
 
         return jsonify(result)
     except Exception as e:

@@ -8,18 +8,31 @@ export default function CardCreator({ onCreateCard, disabled, cardStatus }) {
   const [creating, setCreating] = useState(false)
   const [ankiError, setAnkiError] = useState(null)
 
-  // load available Anki decks
+  // load available Anki decks and restore saved default
   useEffect(() => {
     window.api.getDecks().then(d => {
       if (d?.length) {
         setDecks(d)
-        // default to 'Swedish' if it exists, otherwise first deck
-        setSelectedDeck(d.includes('Swedish') ? 'Swedish' : d[0])
+        // restore saved default deck from localStorage
+        const savedDeck = localStorage.getItem('defaultAnkiDeck')
+        if (savedDeck && d.includes(savedDeck)) {
+          setSelectedDeck(savedDeck)
+        } else if (d.includes('Swedish')) {
+          setSelectedDeck('Swedish')
+        } else {
+          setSelectedDeck(d[0])
+        }
       }
     }).catch(() => {
       setAnkiError('Anki is not running — open Anki to create cards')
     })
   }, [])
+
+  // save deck selection as new default when changed
+  const handleDeckChange = (deck) => {
+    setSelectedDeck(deck)
+    localStorage.setItem('defaultAnkiDeck', deck)
+  }
 
   const handleCreate = async () => {
     setCreating(true)
@@ -52,7 +65,7 @@ export default function CardCreator({ onCreateCard, disabled, cardStatus }) {
         <div style={{ marginBottom: '10px' }}>
           <select
             value={selectedDeck}
-            onChange={e => setSelectedDeck(e.target.value)}
+            onChange={e => handleDeckChange(e.target.value)}
             style={{
               background: 'var(--bg-2)',
               color: 'var(--text)',
@@ -69,6 +82,13 @@ export default function CardCreator({ onCreateCard, disabled, cardStatus }) {
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
+          <div style={{
+            fontSize: '10px',
+            color: 'var(--text-muted)',
+            marginTop: '4px',
+          }}>
+            sparas som standard
+          </div>
         </div>
       )}
 

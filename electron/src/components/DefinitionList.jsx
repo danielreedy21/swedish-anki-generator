@@ -1,14 +1,6 @@
 import React, { useState } from 'react'
 
-export default function DefinitionList({ definitions, selectedIndex, onSelect, onImprove }) {
-  const [improving, setImproving] = useState(false)
-
-  const handleImprove = async () => {
-    setImproving(true)
-    await onImprove()
-    setImproving(false)
-  }
-
+export default function DefinitionList({ definitions, word, onImprove }) {
   return (
     <div style={{ marginBottom: '16px' }}>
       <SectionLabel text="definitioner" />
@@ -18,30 +10,36 @@ export default function DefinitionList({ definitions, selectedIndex, onSelect, o
           key={i}
           def={def}
           index={i}
-          isSelected={i === selectedIndex}
-          onSelect={() => onSelect(i)}
-          onImprove={handleImprove}
-          improving={improving && i === selectedIndex}
+          word={word}
+          definitionIndex={i}
+          onImprove={onImprove}
         />
       ))}
     </div>
   )
 }
 
-function DefinitionCard({ def, index, isSelected, onSelect, onImprove, improving }) {
+function DefinitionCard({ def, index, word, definitionIndex, onImprove }) {
+  const [improving, setImproving] = useState(false)
   const translation = def.improved_translation || def.translation
+
+  const handleImprove = async () => {
+    setImproving(true)
+    const improvedDef = await window.api.improveTranslation(word, definitionIndex)
+    if (improvedDef && onImprove) {
+      onImprove(definitionIndex, improvedDef)
+    }
+    setImproving(false)
+  }
 
   return (
     <div
-      onClick={onSelect}
       style={{
-        background: isSelected ? 'var(--bg-3)' : 'var(--bg-2)',
-        border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+        background: 'var(--bg-2)',
+        border: '1px solid var(--border)',
         borderRadius: 'var(--radius)',
         padding: '12px',
         marginBottom: '8px',
-        cursor: 'pointer',
-        transition: 'border-color 0.15s, background 0.15s',
       }}
     >
       {/* header row */}
@@ -80,23 +78,21 @@ function DefinitionCard({ def, index, isSelected, onSelect, onImprove, improving
           {translation || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>no translation</span>}
         </span>
 
-        {/* improve button — only on selected */}
-        {isSelected && (
-          <button
-            onClick={e => { e.stopPropagation(); onImprove() }}
-            disabled={improving}
-            title="improve translation with Claude"
-            style={{
-              fontSize: '10px',
-              color: improving ? 'var(--text-muted)' : 'var(--accent-2)',
-              background: 'none',
-              padding: '2px 4px',
-              opacity: improving ? 0.5 : 1,
-            }}
-          >
-            {improving ? '...' : '✦ improve'}
-          </button>
-        )}
+        {/* improve button */}
+        <button
+          onClick={handleImprove}
+          disabled={improving}
+          title="improve translation with Claude"
+          style={{
+            fontSize: '10px',
+            color: improving ? 'var(--text-muted)' : 'var(--accent-2)',
+            background: 'none',
+            padding: '2px 4px',
+            opacity: improving ? 0.5 : 1,
+          }}
+        >
+          {improving ? '...' : '✦ improve'}
+        </button>
       </div>
 
       {/* Swedish definition */}
