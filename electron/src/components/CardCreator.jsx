@@ -4,7 +4,7 @@ import { SectionLabel } from './DefinitionList'
 export default function CardCreator({ onCreateCard, disabled, cardStatus }) {
   const [decks, setDecks]       = useState([])
   const [selectedDeck, setSelectedDeck] = useState('Swedish')
-  const [createReverse, setCreateReverse] = useState(false)
+  const [createReverse, setCreateReverse] = useState(true)  // checked by default
   const [creating, setCreating] = useState(false)
   const [ankiError, setAnkiError] = useState(null)
 

@@ -44,7 +44,19 @@ def add_card(
     Each definition is numbered and includes its translation, Swedish definition,
     examples, and synonyms. Supports up to 4 images.
     """
-    front_word = f'{article}' if article else word
+    # if word has both noun and non-noun definitions, show both forms
+    has_noun = any(d.get('class') == 'substantiv' for d in definitions)
+    has_non_noun = any(d.get('class') != 'substantiv' for d in definitions)
+    
+    if has_noun and has_non_noun and article:
+        # e.g. "måste, ett måste"
+        front_word = f'{word}, {article}'
+    elif article:
+        # just noun, show with article
+        front_word = article
+    else:
+        # no noun definition
+        front_word = word
 
     # build back of card with all definitions
     back_parts = []
@@ -143,7 +155,19 @@ def add_reverse_card(
     The front shows up to 4 images with collapsible definition hints.
     The back shows the Swedish word with phonetic and audio.
     """
-    front_word = f'{article}' if article else word
+    # if word has both noun and non-noun definitions, show both forms
+    has_noun = any(d.get('class') == 'substantiv' for d in definitions)
+    has_non_noun = any(d.get('class') != 'substantiv' for d in definitions)
+    
+    if has_noun and has_non_noun and article:
+        # e.g. "måste, ett måste"
+        back_word = f'{word}, {article}'
+    elif article:
+        # just noun, show with article
+        back_word = article
+    else:
+        # no noun definition
+        back_word = word
 
     # front: images and collapsible definitions
     front_parts = []
@@ -183,7 +207,7 @@ def add_reverse_card(
     front = '<br>'.join(front_parts) if front_parts else 'no context available'
 
     # back: word with phonetic and audio
-    back_parts = [f'<span style="font-size: 24px; font-style: italic;">{front_word}</span>']
+    back_parts = [f'<span style="font-size: 24px; font-style: italic;">{back_word}</span>']
     
     if phonetic:
         back_parts.append(f'<div style="color: #7a7570; font-size: 13px; margin-top: 6px;">[{phonetic}]</div>')
