@@ -30,6 +30,60 @@ def is_anki_running() -> bool:
         return False
 
 
+def _build_inflections_html(definitions: list) -> str:
+    """
+    Build an HTML block showing inflections for all definitions.
+    Groups inflections by word class when there are multiple definition senses.
+    Returns an empty string if no inflections exist.
+    """
+    # Collect inflections per word class
+    groups = []
+    for def_entry in definitions:
+        inflections = def_entry.get('inflections', [])
+        if not inflections:
+            continue
+        word_class = def_entry.get('class', '')
+        groups.append((word_class, inflections))
+
+    if not groups:
+        return ''
+
+    chip_style = (
+        'display: inline-block;'
+        'background: rgba(255,255,255,0.08);'
+        'border: 1px solid rgba(255,255,255,0.15);'
+        'border-radius: 4px;'
+        'padding: 2px 8px;'
+        'margin: 2px 3px;'
+        'font-size: 13px;'
+        'color: #c8c4be;'
+    )
+
+    label_style = (
+        'font-size: 10px;'
+        'color: #7a7570;'
+        'text-transform: uppercase;'
+        'letter-spacing: 0.05em;'
+        'margin-right: 4px;'
+    )
+
+    parts = []
+
+    if len(groups) == 1:
+        # Single group — no label needed
+        _, inflections = groups[0]
+        chips = ''.join(f'<span style="{chip_style}">{inf}</span>' for inf in inflections)
+        parts.append(f'<div style="margin-top: 10px;">{chips}</div>')
+    else:
+        # Multiple groups — label each by word class
+        for word_class, inflections in groups:
+            chips = ''.join(f'<span style="{chip_style}">{inf}</span>' for inf in inflections)
+            label = f'<span style="{label_style}">{word_class}:</span>' if word_class else ''
+            parts.append(f'<div style="margin-top: 6px;">{label}{chips}</div>')
+
+    return ''.join(parts)
+
+
 def add_card(
     word: str,
     article: Optional[str],
@@ -47,7 +101,7 @@ def add_card(
     # if word has both noun and non-noun definitions, show both forms
     has_noun = any(d.get('class') == 'substantiv' for d in definitions)
     has_non_noun = any(d.get('class') != 'substantiv' for d in definitions)
-    
+
     if has_noun and has_non_noun and article:
         # e.g. "måste, ett måste"
         front_word = f'{word}, {article}'
@@ -58,16 +112,18 @@ def add_card(
         # no noun definition
         front_word = word
 
+    front = f'<div style="font-size: 28px; font-weight: bold;">{front_word}</div>'
+
     # build back of card with all definitions
     back_parts = []
 
     for i, def_entry in enumerate(definitions, 1):
         def_parts = []
-        
+
         # number and word class
         word_class = def_entry.get('class', '')
         translation = def_entry.get('improved_translation') or def_entry.get('translation', '')
-        
+
         header = f'<b>{i}. {word_class}'
         if translation:
             header += f' — {translation}'
@@ -94,6 +150,22 @@ def add_card(
             phonetic = def_entry.get('phonetic')
             if phonetic:
                 def_parts.append(f'<span style="font-size: 90%; color: #999;">[{phonetic}]</span>')
+
+        # inflections for this definition
+        inflections = def_entry.get('inflections', [])
+        if inflections:
+            chip_style = (
+                'display: inline-block;'
+                'background: rgba(255,255,255,0.08);'
+                'border: 1px solid rgba(255,255,255,0.15);'
+                'border-radius: 4px;'
+                'padding: 2px 8px;'
+                'margin: 2px 3px;'
+                'font-size: 13px;'
+                'color: #c8c4be;'
+            )
+            chips = ''.join(f'<span style="{chip_style}">{inf}</span>' for inf in inflections)
+            def_parts.append(f'<div style="margin-top: 4px;">{chips}</div>')
 
         back_parts.append('<br>'.join(def_parts))
 
@@ -122,7 +194,7 @@ def add_card(
             'deckName': deck,
             'modelName': ANKI_MODEL_NAME,
             'fields': {
-                'Front': front_word,
+                'Front': front,
                 'Back': back,
             },
             'tags': ['swedish', 'word-card', 'forward-card'] + [wc.lower() for wc in word_classes if wc],
@@ -153,12 +225,12 @@ def add_reverse_card(
     """
     Create a reverse Anki card (images + definitions → word).
     The front shows up to 4 images with collapsible definition hints.
-    The back shows the Swedish word with phonetic and audio.
+    The back shows the Swedish word with phonetic, audio, and inflections.
     """
     # if word has both noun and non-noun definitions, show both forms
     has_noun = any(d.get('class') == 'substantiv' for d in definitions)
     has_non_noun = any(d.get('class') != 'substantiv' for d in definitions)
-    
+
     if has_noun and has_non_noun and article:
         # e.g. "måste, ett måste"
         back_word = f'{word}, {article}'
@@ -171,7 +243,7 @@ def add_reverse_card(
 
     # front: images and collapsible definitions
     front_parts = []
-    
+
     # add images in a grid layout (up to 4)
     if image_urls:
         num_images = len(image_urls)
@@ -183,7 +255,7 @@ def add_reverse_card(
         else:  # 3 or 4 images
             imgs = ''.join([f'<img src="{url}" style="width: 48%; margin: 1%; border-radius: 8px;">' for url in image_urls])
             front_parts.append(f'<div>{imgs}</div>')
-    
+
     # build all definitions into collapsible hint
     if definitions:
         def_lines = []
@@ -192,7 +264,7 @@ def add_reverse_card(
             if definition:
                 word_class = def_entry.get('class', '')
                 def_lines.append(f'{i}. {word_class} — <i>{definition}</i>')
-        
+
         if def_lines:
             definitions_html = '<br>'.join(def_lines)
             front_parts.append(f'''
@@ -203,19 +275,24 @@ def add_reverse_card(
                     </div>
                 </details>
             ''')
-    
+
     front = '<br>'.join(front_parts) if front_parts else 'no context available'
 
-    # back: word with phonetic and audio
-    back_parts = [f'<span style="font-size: 24px; font-style: italic;">{back_word}</span>']
-    
+    # back: word with phonetic, audio, and inflections
+    inflections_html = _build_inflections_html(definitions)
+
+    back_parts = [f'<div style="font-size: 24px; font-style: italic;">{back_word}</div>']
+
+    if inflections_html:
+        back_parts.append(inflections_html)
+
     if phonetic:
         back_parts.append(f'<div style="color: #7a7570; font-size: 13px; margin-top: 6px;">[{phonetic}]</div>')
-    
+
     if audio_path:
         filename = os.path.basename(audio_path)
         back_parts.append(f'[sound:{filename}]')
-    
+
     back = ''.join(back_parts)
 
     note_id = _ankiconnect(
