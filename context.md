@@ -66,11 +66,11 @@ anki_swedish/
 ### Card Creation
 **Forward Cards** (`word-card`, `forward-card`):
 - Front: Word with article (e.g., `en hund` or `måste, ett måste` for mixed noun/verb)
-- Back: All definitions numbered with translations, Swedish definitions, examples, synonyms, phonetic, audio, up to 4 images
+- Back: All definitions numbered with translations, Swedish definitions, examples, synonyms, phonetic, audio, inflection chips, up to 4 images
 
 **Reverse Cards** (`word-card`, `reverse-card`):
 - Front: Up to 4 images + collapsible hint with all Swedish definitions
-- Back: Word with article, phonetic, audio
+- Back: Word with article, inflection chips, phonetic, audio
 
 **Tags**: `swedish`, `word-card`, `forward-card`/`reverse-card`, plus word classes (`substantiv`, `verb`, etc.)
 
@@ -108,7 +108,17 @@ GET  /decks                     # List Anki decks
 - **Automatic search**: Queries word directly via Serper (Swedish locale `gl=se`, `hl=sv`)
 - **Custom search**: User can input own query (e.g., "dog photo" vs "hund")
 - **Storage**: URLs embedded directly in cards (not downloaded)
-- **Layout**: 1 image = centered, 2 = side-by-side, 3-4 = 2×2 grid
+- **Layout**: Handled by `_build_images_html()` in `anki.py`:
+  - 1 image: centered, `max-width: 600px; width: 100%` — scales down on mobile
+  - 2–4 images: 2-column grid with `object-fit: cover` for uniform thumbnails
+  - Grid height is `160px` on mobile, bumped to `260px` on desktop (≥600px) via CSS media query injected inline using the `.anki-grid-img` class
+
+### Inflection Display
+- Inflections are sourced from `def_entry.get('inflections', [])` on each definition entry
+- Rendered as styled chips (subtle background, rounded corners, muted color)
+- **Forward cards**: Inflection chips appear per-definition on the back, after phonetic
+- **Reverse cards**: Inflection chips appear on the back, between the word and phonetic, via the shared `_build_inflections_html()` helper
+- `_build_inflections_html()` groups inflections by word class; single word-class words show chips without a label, multi-class words label each group
 
 ### Translation Improvement
 - Only called on demand via `✦ improve` button
@@ -217,7 +227,7 @@ npm run dev  # in separate terminal
 
 **Backend Logic:**
 - `lexicon.py` - All dictionary parsing, word lookup, inflection mapping
-- `anki.py` - Card HTML generation and AnkiConnect calls
+- `anki.py` - Card HTML generation and AnkiConnect calls; contains `_build_images_html()` and `_build_inflections_html()` helpers
 - `translation.py` - Claude integration
 
 **Frontend Components:**
@@ -243,6 +253,7 @@ npm run dev  # in separate terminal
 **Changing card layout:**
 - Edit `add_card()` and `add_reverse_card()` in `anki.py`
 - HTML/CSS is inline in Python strings
+- Use `_build_images_html()` for image blocks, `_build_inflections_html()` for inflection chips
 - Test in Anki card browser after changes
 
 **Adding new UI component:**

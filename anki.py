@@ -36,7 +36,6 @@ def _build_inflections_html(definitions: list) -> str:
     Groups inflections by word class when there are multiple definition senses.
     Returns an empty string if no inflections exist.
     """
-    # Collect inflections per word class
     groups = []
     for def_entry in definitions:
         inflections = def_entry.get('inflections', [])
@@ -70,18 +69,72 @@ def _build_inflections_html(definitions: list) -> str:
     parts = []
 
     if len(groups) == 1:
-        # Single group — no label needed
         _, inflections = groups[0]
         chips = ''.join(f'<span style="{chip_style}">{inf}</span>' for inf in inflections)
         parts.append(f'<div style="margin-top: 10px;">{chips}</div>')
     else:
-        # Multiple groups — label each by word class
         for word_class, inflections in groups:
             chips = ''.join(f'<span style="{chip_style}">{inf}</span>' for inf in inflections)
             label = f'<span style="{label_style}">{word_class}:</span>' if word_class else ''
             parts.append(f'<div style="margin-top: 6px;">{label}{chips}</div>')
 
     return ''.join(parts)
+
+
+def _build_images_html(image_urls: list) -> str:
+    """
+    Build a responsive image block for up to 4 images, optimized for mobile.
+    - 1 image: centered, max 600px wide, scales down on smaller screens
+    - 2-4 images: 2-column grid, each image constrained and cropped to uniform height
+    """
+    if not image_urls:
+        return ''
+
+    num_images = len(image_urls)
+
+    single_img_style = (
+        'max-width: 600px;'
+        'width: 100%;'
+        'height: auto;'
+        'border-radius: 8px;'
+        'display: block;'
+        'margin: 0 auto;'
+    )
+
+    grid_cell_style = (
+        'width: 48%;'
+        'display: inline-block;'
+        'margin: 1%;'
+        'vertical-align: top;'
+    )
+
+    grid_img_style = (
+        'width: 100%;'
+        'height: 160px;'
+        'object-fit: cover;'
+        'border-radius: 8px;'
+        'display: block;'
+    )
+
+    if num_images == 1:
+        return f'<img src="{image_urls[0]}" style="{single_img_style}">'
+    else:
+        cells = ''.join(
+            f'<span style="{grid_cell_style}"><img src="{url}" style="{grid_img_style}" class="anki-grid-img"></span>'
+            for url in image_urls
+        )
+        # Media query bumps grid image height to 260px on wider screens (desktop)
+        responsive_style = (
+            '<style>'
+            '@media (min-width: 600px) { .anki-grid-img { height: 260px !important; } }'
+            '</style>'
+        )
+        return (
+            f'{responsive_style}'
+            f'<div style="max-width: 600px; margin: 0 auto; font-size: 0;">'
+            f'{cells}'
+            f'</div>'
+        )
 
 
 def add_card(
@@ -98,29 +151,23 @@ def add_card(
     Each definition is numbered and includes its translation, Swedish definition,
     examples, and synonyms. Supports up to 4 images.
     """
-    # if word has both noun and non-noun definitions, show both forms
     has_noun = any(d.get('class') == 'substantiv' for d in definitions)
     has_non_noun = any(d.get('class') != 'substantiv' for d in definitions)
 
     if has_noun and has_non_noun and article:
-        # e.g. "måste, ett måste"
         front_word = f'{word}, {article}'
     elif article:
-        # just noun, show with article
         front_word = article
     else:
-        # no noun definition
         front_word = word
 
     front = f'<div style="font-size: 28px; font-weight: bold;">{front_word}</div>'
 
-    # build back of card with all definitions
     back_parts = []
 
     for i, def_entry in enumerate(definitions, 1):
         def_parts = []
 
-        # number and word class
         word_class = def_entry.get('class', '')
         translation = def_entry.get('improved_translation') or def_entry.get('translation', '')
 
@@ -130,28 +177,23 @@ def add_card(
         header += '</b>'
         def_parts.append(header)
 
-        # Swedish definition
         definition = def_entry.get('definition')
         if definition:
             def_parts.append(f'<i>{definition}</i>')
 
-        # example
         example = def_entry.get('example')
         if example:
             def_parts.append(f'<span style="font-size: 90%;">ex: {example}</span>')
 
-        # synonyms
         synonyms = def_entry.get('synonyms', [])
         if synonyms:
             def_parts.append(f'<span style="font-size: 90%;">synonymer: {", ".join(synonyms)}</span>')
 
-        # phonetic (only on first definition to avoid repetition)
         if i == 1:
             phonetic = def_entry.get('phonetic')
             if phonetic:
                 def_parts.append(f'<span style="font-size: 90%; color: #999;">[{phonetic}]</span>')
 
-        # inflections for this definition
         inflections = def_entry.get('inflections', [])
         if inflections:
             chip_style = (
@@ -169,22 +211,13 @@ def add_card(
 
         back_parts.append('<br>'.join(def_parts))
 
-    # add audio (once, not per definition)
     if audio_path:
         filename = os.path.basename(audio_path)
         back_parts.append(f'[sound:{filename}]')
 
-    # add images in a grid layout (up to 4)
-    if image_urls:
-        num_images = len(image_urls)
-        if num_images == 1:
-            back_parts.append(f'<img src="{image_urls[0]}" style="max-width: 400px; border-radius: 8px;">')
-        elif num_images == 2:
-            imgs = ''.join([f'<img src="{url}" style="width: 48%; margin: 1%; border-radius: 8px;">' for url in image_urls])
-            back_parts.append(f'<div>{imgs}</div>')
-        else:  # 3 or 4 images
-            imgs = ''.join([f'<img src="{url}" style="width: 48%; margin: 1%; border-radius: 8px;">' for url in image_urls])
-            back_parts.append(f'<div>{imgs}</div>')
+    images_html = _build_images_html(image_urls)
+    if images_html:
+        back_parts.append(images_html)
 
     back = '<br><br>'.join(back_parts)
 
@@ -227,36 +260,22 @@ def add_reverse_card(
     The front shows up to 4 images with collapsible definition hints.
     The back shows the Swedish word with phonetic, audio, and inflections.
     """
-    # if word has both noun and non-noun definitions, show both forms
     has_noun = any(d.get('class') == 'substantiv' for d in definitions)
     has_non_noun = any(d.get('class') != 'substantiv' for d in definitions)
 
     if has_noun and has_non_noun and article:
-        # e.g. "måste, ett måste"
         back_word = f'{word}, {article}'
     elif article:
-        # just noun, show with article
         back_word = article
     else:
-        # no noun definition
         back_word = word
 
-    # front: images and collapsible definitions
     front_parts = []
 
-    # add images in a grid layout (up to 4)
-    if image_urls:
-        num_images = len(image_urls)
-        if num_images == 1:
-            front_parts.append(f'<img src="{image_urls[0]}" style="max-width: 300px; border-radius: 8px;">')
-        elif num_images == 2:
-            imgs = ''.join([f'<img src="{url}" style="width: 48%; margin: 1%; border-radius: 8px;">' for url in image_urls])
-            front_parts.append(f'<div>{imgs}</div>')
-        else:  # 3 or 4 images
-            imgs = ''.join([f'<img src="{url}" style="width: 48%; margin: 1%; border-radius: 8px;">' for url in image_urls])
-            front_parts.append(f'<div>{imgs}</div>')
+    images_html = _build_images_html(image_urls)
+    if images_html:
+        front_parts.append(images_html)
 
-    # build all definitions into collapsible hint
     if definitions:
         def_lines = []
         for i, def_entry in enumerate(definitions, 1):
@@ -278,7 +297,6 @@ def add_reverse_card(
 
     front = '<br>'.join(front_parts) if front_parts else 'no context available'
 
-    # back: word with phonetic, audio, and inflections
     inflections_html = _build_inflections_html(definitions)
 
     back_parts = [f'<div style="font-size: 24px; font-style: italic;">{back_word}</div>']
