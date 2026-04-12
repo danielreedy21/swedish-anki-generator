@@ -1,6 +1,14 @@
 import os
+import sys
 from dotenv import load_dotenv
 load_dotenv()
+
+# --- Resource path resolution (handles PyInstaller bundles) ---
+def _resource(relative_path):
+    """Return absolute path to a resource, works in dev and PyInstaller builds."""
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), relative_path)
 
 # --- API Keys ---
 # set these as environment variables, or replace directly for local dev
@@ -9,8 +17,8 @@ FORVO_API_KEY = os.getenv('FORVO_API_KEY')
 SERPER_DEV_API_KEY = os.getenv('SERPER_DEV_API_KEY')
 
 # --- Data Paths ---
-FOLKETS_XML_PATH = os.getenv('FOLKETS_XML_PATH', 'data/folkets_sv_en_public.xml')
-KAIKKI_JSONL_PATH = os.getenv('KAIKKI_JSONL_PATH', 'data/kaikki.org-dictionary-Swedish.jsonl')
+FOLKETS_XML_PATH = os.getenv('FOLKETS_XML_PATH', _resource('data/folkets_sv_en_public.xml'))
+KAIKKI_JSONL_PATH = os.getenv('KAIKKI_JSONL_PATH', _resource('data/kaikki.org-dictionary-Swedish.jsonl'))
 
 # --- Audio ---
 AUDIO_DIR = os.getenv('AUDIO_DIR', 'audio')

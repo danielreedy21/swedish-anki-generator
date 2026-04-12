@@ -6,18 +6,34 @@
   "scripts": {
     "dev": "NODE_ENV=development electron .",
     "dev:vite": "vite src",
-    "build": "vite build src && electron-builder",
+    "build": "vite build && electron-builder",
     "start": "electron ."
   },
   "build": {
-    "appId": "com.yourname.anki-swedish",
+    "appId": "com.danielreedy.anki-swedish",
+    "productName": "Swedish Anki",
+    "directories": {
+      "output": "release"
+    },
     "mac": {
-      "target": "dmg"
+      "target": "dmg",
+      "category": "public.app-category.education"
     },
     "files": [
       "main.js",
       "preload.js",
-      "dist/**/*"
+      "ui-build/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../flask-dist/flask-server",
+        "to": "flask-server",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../.env",
+        "to": ".env"
+      }
     ]
   },
   "dependencies": {

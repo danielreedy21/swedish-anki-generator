@@ -2,3 +2,13 @@ audio/*
 .env
 electron/node_modules/*
 data/*
+
+# Build outputs
+flask-dist/
+flask-server.spec.bak
+electron/ui-build/
+electron/release/
+electron/dist/
+electron/src/dist/
+__pycache__/
+*.pyc

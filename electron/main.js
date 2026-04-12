@@ -1,10 +1,68 @@
 const { app, BrowserWindow, globalShortcut, clipboard, ipcMain, shell } = require('electron')
 const path = require('path')
+const fs = require('fs')
+const { spawn } = require('child_process')
 
 const FLASK_URL = 'http://127.0.0.1:5000'
 const DEV_MODE = process.env.NODE_ENV === 'development'
 
 let mainWindow = null
+let flaskProcess = null
+
+// ---------------------------------------------------------------------------
+// Flask server management (production only)
+// ---------------------------------------------------------------------------
+
+function loadEnvFile(filePath) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8')
+    const env = {}
+    for (const line of content.split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed || trimmed.startsWith('#')) continue
+      const eqIdx = trimmed.indexOf('=')
+      if (eqIdx === -1) continue
+      const key = trimmed.slice(0, eqIdx).trim()
+      const value = trimmed.slice(eqIdx + 1).trim().replace(/^["']|["']$/g, '')
+      env[key] = value
+    }
+    return env
+  } catch {
+    return {}
+  }
+}
+
+async function waitForFlask(maxWaitMs = 30000) {
+  const start = Date.now()
+  while (Date.now() - start < maxWaitMs) {
+    try {
+      const res = await fetch(`${FLASK_URL}/health`)
+      if (res.ok) return true
+    } catch {}
+    await new Promise(r => setTimeout(r, 300))
+  }
+  return false
+}
+
+function startFlaskServer() {
+  if (DEV_MODE) return Promise.resolve(true)
+
+  const resourcesPath = process.resourcesPath
+  const flaskBin = path.join(resourcesPath, 'flask-server', 'flask-server')
+  const envFile = path.join(resourcesPath, '.env')
+  const extraEnv = loadEnvFile(envFile)
+
+  flaskProcess = spawn(flaskBin, [], {
+    env: { ...process.env, ...extraEnv },
+    stdio: 'pipe',
+  })
+
+  flaskProcess.stdout.on('data', d => console.log('[flask]', d.toString().trim()))
+  flaskProcess.stderr.on('data', d => console.error('[flask]', d.toString().trim()))
+  flaskProcess.on('exit', code => console.log(`[flask] exited with code ${code}`))
+
+  return waitForFlask()
+}
 
 // ---------------------------------------------------------------------------
 // Window
@@ -29,11 +87,13 @@ function createWindow() {
     mainWindow.loadURL('http://localhost:5173')
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   } else {
-    mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'))
+    mainWindow.loadFile(path.join(__dirname, 'ui-build', 'index.html'))
   }
 
   // hide instead of close so it reappears instantly on next hotkey press
+  // but allow real quit (Cmd+Q) to go through
   mainWindow.on('close', (e) => {
+    if (app.isQuitting) return
     e.preventDefault()
     mainWindow.hide()
   })
@@ -146,9 +206,18 @@ ipcMain.on('hide-window', () => {
 // App lifecycle
 // ---------------------------------------------------------------------------
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   createWindow()
+  await startFlaskServer()
   registerHotkey()
+})
+
+app.on('before-quit', () => {
+  app.isQuitting = true
+  if (flaskProcess) {
+    flaskProcess.kill('SIGKILL')
+    flaskProcess = null
+  }
 })
 
 app.on('will-quit', () => {

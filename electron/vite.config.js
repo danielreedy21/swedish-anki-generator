@@ -6,6 +6,6 @@ export default defineConfig({
   base: './',   // important for Electron — use relative paths in built files
   root: 'src',
   build: {
-    outDir: '../dist',  // output to electron/dist
+    outDir: '../ui-build',  // output to electron/ui-build (avoids conflict with electron-builder's dist/)
   },
 })
